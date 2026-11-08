@@ -1,0 +1,140 @@
+{
+  "info": {
+    "_postman_id": "bb6a58af-5f5a-4f4a-9b1d-2ac5d62cb401",
+    "name": "Student Management System – Subject Management",
+    "description": "Subject CRUD and Student–Subject assignment requests. Run the requests in order using the Student Management Local environment. The environment must contain an existing studentId for assignment requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register Subject",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Accept", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subjectCode\": \"CS101\",\n  \"subjectName\": \"Programming Fundamentals\",\n  \"description\": \"Introduction to programming concepts\",\n  \"credits\": 3\n}",
+          "options": {"raw": {"language": "json"}}
+        },
+        "url": {"raw": "{{baseUrl}}/api/subjects", "host": ["{{baseUrl}}"], "path": ["api", "subjects"]},
+        "description": "Creates a subject and saves its generated ID into subjectId."
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+        "pm.test('Status code is 201 Created', function () { pm.response.to.have.status(201); });",
+        "const data = pm.response.json();",
+        "pm.test('Subject response contains an ID', function () { pm.expect(data.id).to.be.a('number'); });",
+        "pm.test('Subject fields are correct', function () { pm.expect(data.subjectCode).to.eql('CS101'); pm.expect(data.subjectName).to.eql('Programming Fundamentals'); });",
+        "pm.environment.set('subjectId', data.id);"
+      ]}}]
+    },
+    {
+      "name": "Get All Subjects",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Accept", "value": "application/json"}],
+        "url": {"raw": "{{baseUrl}}/api/subjects", "host": ["{{baseUrl}}"], "path": ["api", "subjects"]},
+        "description": "Returns all subjects. An empty database produces an empty JSON array."
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+        "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+        "pm.test('Response is an array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+      ]}}]
+    },
+    {
+      "name": "Get Subject By ID",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Accept", "value": "application/json"}],
+        "url": {"raw": "{{baseUrl}}/api/subjects/{{subjectId}}", "host": ["{{baseUrl}}"], "path": ["api", "subjects", "{{subjectId}}"]},
+        "description": "Returns the subject created by Register Subject."
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+        "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+        "pm.test('Returned subject uses the saved ID', function () { pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get('subjectId'))); });"
+      ]}}]
+    },
+    {
+      "name": "Update Subject",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Accept", "value": "application/json"}
+        ],
+        "body": {"mode": "raw", "raw": "{\n  \"subjectCode\": \"CS101\",\n  \"subjectName\": \"Advanced Programming\",\n  \"description\": \"Updated programming subject description\",\n  \"credits\": 4\n}", "options": {"raw": {"language": "json"}}},
+        "url": {"raw": "{{baseUrl}}/api/subjects/{{subjectId}}", "host": ["{{baseUrl}}"], "path": ["api", "subjects", "{{subjectId}}"]},
+        "description": "Updates the subject without changing its generated ID."
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+        "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+        "pm.test('Subject was updated', function () { pm.expect(pm.response.json().subjectName).to.eql('Advanced Programming'); });"
+      ]}}]
+    },
+    {
+      "name": "Assign Subject to Student",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Accept", "value": "application/json"}],
+        "url": {"raw": "{{baseUrl}}/api/students/{{studentId}}/subjects/{{subjectId}}", "host": ["{{baseUrl}}"], "path": ["api", "students", "{{studentId}}", "subjects", "{{subjectId}}"]},
+        "description": "Assigns the selected subject to the existing studentId. The student must already exist."
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+        "pm.test('Status code is 201 Created', function () { pm.response.to.have.status(201); });",
+        "pm.test('Assignment references the selected IDs', function () { const data = pm.response.json(); pm.expect(data.studentId).to.eql(Number(pm.environment.get('studentId'))); pm.expect(data.subjectId).to.eql(Number(pm.environment.get('subjectId'))); });"
+      ]}}]
+    },
+    {
+      "name": "Get Student's Subjects",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Accept", "value": "application/json"}],
+        "url": {"raw": "{{baseUrl}}/api/students/{{studentId}}/subjects", "host": ["{{baseUrl}}"], "path": ["api", "students", "{{studentId}}", "subjects"]},
+        "description": "Lists all subjects assigned to the selected student."
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+        "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+        "pm.test('Response is an array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+      ]}}]
+    },
+    {
+      "name": "Get Students in a Subject",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Accept", "value": "application/json"}],
+        "url": {"raw": "{{baseUrl}}/api/subjects/{{subjectId}}/students", "host": ["{{baseUrl}}"], "path": ["api", "subjects", "{{subjectId}}", "students"]},
+        "description": "Lists all students assigned to the selected subject."
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+        "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+        "pm.test('Response is an array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+      ]}}]
+    },
+    {
+      "name": "Remove Student–Subject Assignment",
+      "request": {
+        "method": "DELETE",
+        "header": [{"key": "Accept", "value": "application/json"}],
+        "url": {"raw": "{{baseUrl}}/api/students/{{studentId}}/subjects/{{subjectId}}", "host": ["{{baseUrl}}"], "path": ["api", "students", "{{studentId}}", "subjects", "{{subjectId}}"]},
+        "description": "Removes only the assignment. It does not delete the student or subject. Run this before Delete Subject."
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+        "pm.test('Status code is 204 No Content', function () { pm.response.to.have.status(204); });"
+      ]}}]
+    },
+    {
+      "name": "Delete Subject",
+      "request": {
+        "method": "DELETE",
+        "header": [{"key": "Accept", "value": "application/json"}],
+        "url": {"raw": "{{baseUrl}}/api/subjects/{{subjectId}}", "host": ["{{baseUrl}}"], "path": ["api", "subjects", "{{subjectId}}"]},
+        "description": "Deletes the subject after its assignment has been removed. Deleting an assigned subject returns 409 Conflict."
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+        "pm.test('Status code is 204 No Content', function () { pm.response.to.have.status(204); });"
+      ]}}]
+    }
+  ]
+}

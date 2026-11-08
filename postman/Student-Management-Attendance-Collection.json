@@ -1,0 +1,845 @@
+{
+    "info":  {
+                 "_postman_id":  "6b2e5b3e-0b4d-45d7-9e45-8b5c3a2aa001",
+                 "name":  "Student Management System API Testing",
+                 "description":  "Attendance API tests for the existing Spring Boot application. Run requests in order. Student and subject IDs must already exist.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "event":  [
+                  {
+                      "listen":  "prerequest",
+                      "script":  {
+                                     "type":  "text/javascript",
+                                     "exec":  [
+                                                  "const configured = pm.environment.get(\u0027attendanceDate\u0027);",
+                                                  "const today = new Date().toISOString().slice(0, 10);",
+                                                  "if (!configured || configured \u003e today) pm.environment.set(\u0027attendanceDate\u0027, today);"
+                                              ]
+                                 }
+                  }
+              ],
+    "variable":  [
+                     {
+                         "key":  "baseUrl",
+                         "value":  "http://localhost:8080"
+                     },
+                     {
+                         "key":  "studentId",
+                         "value":  "1"
+                     },
+                     {
+                         "key":  "subjectId",
+                         "value":  "1"
+                     },
+                     {
+                         "key":  "attendanceId",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "attendanceDate",
+                         "value":  "2026-11-01"
+                     },
+                     {
+                         "key":  "validationDate",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "longRemarks",
+                         "value":  "This remark intentionally exceeds the configured maximum length and verifies validation behavior from Postman."
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "Attendance Management",
+                     "item":  [
+                                  {
+                                      "name":  "01 Create Attendance",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"studentId\": {{studentId}},\n  \"subjectId\": {{subjectId}},\n  \"attendanceDate\": \"{{attendanceDate}}\",\n  \"status\": \"PRESENT\",\n  \"remarks\": \"Student attended the lecture\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "description":  "Creates the record used by subsequent requests. The collection pre-request script changes a configured future date to today because the backend prohibits future attendance dates.",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 201\u0027, () =\u003e pm.response.to.have.status(201));",
+                                                                                    "const data = pm.response.json();",
+                                                                                    "pm.test(\u0027Response is valid attendance JSON\u0027, () =\u003e { pm.expect(data.id).to.exist; pm.expect(data.studentId).to.eql(Number(pm.environment.get(\u0027studentId\u0027))); pm.expect(data.subjectId).to.eql(Number(pm.environment.get(\u0027subjectId\u0027))); });",
+                                                                                    "pm.test(\u0027Attendance status is PRESENT\u0027, () =\u003e pm.expect(data.status).to.eql(\u0027PRESENT\u0027));",
+                                                                                    "pm.environment.set(\u0027attendanceId\u0027, data.id);",
+                                                                                    "pm.environment.set(\u0027validationDate\u0027, data.attendanceDate);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "02 Get All Attendance",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance?page=0\u0026size=20\u0026sort=attendanceDate,desc",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "page",
+                                                                                    "value":  "0"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "size",
+                                                                                    "value":  "20"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "sort",
+                                                                                    "value":  "attendanceDate,desc"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const data = pm.response.json();",
+                                                                                    "pm.test(\u0027Paginated response is valid\u0027, () =\u003e { pm.expect(data).to.have.property(\u0027content\u0027); pm.expect(data.content).to.be.an(\u0027array\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "03 Get Attendance By ID",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance/{{attendanceId}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance",
+                                                                               "{{attendanceId}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const data = pm.response.json();",
+                                                                                    "pm.test(\u0027Returned ID matches created ID\u0027, () =\u003e pm.expect(data.id).to.eql(Number(pm.environment.get(\u0027attendanceId\u0027))));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "04 Update Attendance",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"studentId\": {{studentId}},\n  \"subjectId\": {{subjectId}},\n  \"attendanceDate\": \"{{attendanceDate}}\",\n  \"status\": \"LATE\",\n  \"remarks\": \"Updated by Postman\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance/{{attendanceId}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance",
+                                                                               "{{attendanceId}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const data = pm.response.json();",
+                                                                                    "pm.test(\u0027Status is LATE\u0027, () =\u003e pm.expect(data.status).to.eql(\u0027LATE\u0027));",
+                                                                                    "pm.test(\u0027Remarks are updated\u0027, () =\u003e pm.expect(data.remarks).to.eql(\u0027Updated by Postman\u0027));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "06 Get By Student",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance/student/{{studentId}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance",
+                                                                               "student",
+                                                                               "{{studentId}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.test(\u0027Response is an array\u0027, () =\u003e pm.expect(pm.response.json()).to.be.an(\u0027array\u0027)); "
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "07 Get By Subject",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance/subject/{{subjectId}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance",
+                                                                               "subject",
+                                                                               "{{subjectId}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.test(\u0027Response is an array\u0027, () =\u003e pm.expect(pm.response.json()).to.be.an(\u0027array\u0027)); "
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "08 Get By Date",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance/date/{{validationDate}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance",
+                                                                               "date",
+                                                                               "{{validationDate}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.test(\u0027Response is an array\u0027, () =\u003e pm.expect(pm.response.json()).to.be.an(\u0027array\u0027)); "
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "09 Get By Date Range",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance/range?startDate={{validationDate}}\u0026endDate={{validationDate}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance",
+                                                                               "range"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "startDate",
+                                                                                    "value":  "{{validationDate}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "endDate",
+                                                                                    "value":  "{{validationDate}}"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.test(\u0027Response is an array\u0027, () =\u003e pm.expect(pm.response.json()).to.be.an(\u0027array\u0027)); "
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "10 Student Summary",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance/summary/student/{{studentId}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance",
+                                                                               "summary",
+                                                                               "student",
+                                                                               "{{studentId}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const data = pm.response.json();",
+                                                                                    "pm.test(\u0027Summary fields exist\u0027, () =\u003e [\u0027studentId\u0027,\u0027totalDays\u0027,\u0027presentDays\u0027,\u0027absentDays\u0027,\u0027lateDays\u0027,\u0027attendancePercentage\u0027].forEach(k =\u003e pm.expect(data).to.have.property(k)));",
+                                                                                    "pm.test(\u0027Percentage is numeric\u0027, () =\u003e pm.expect(Number(data.attendancePercentage)).to.be.a(\u0027number\u0027)); "
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "11 Subject Summary",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance/summary/subject/{{subjectId}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance",
+                                                                               "summary",
+                                                                               "subject",
+                                                                               "{{subjectId}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const data = pm.response.json();",
+                                                                                    "pm.test(\u0027Summary fields exist\u0027, () =\u003e [\u0027subjectId\u0027,\u0027totalDays\u0027,\u0027presentDays\u0027,\u0027absentDays\u0027,\u0027lateDays\u0027,\u0027attendancePercentage\u0027].forEach(k =\u003e pm.expect(data).to.have.property(k))); "
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "12 Validation Tests",
+                                      "item":  [
+                                                   {
+                                                       "name":  "AT-02 Empty request body",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status code is 400\u0027, () =\u003e pm.response.to.have.status(400));",
+                                                                                                     "pm.test(\u0027Meaningful error returned\u0027, () =\u003e pm.expect(pm.response.json().message).to.be.a(\u0027string\u0027)); "
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   },
+                                                   {
+                                                       "name":  "AT-03 Invalid student ID",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\"studentId\":99999,\"subjectId\":{{subjectId}},\"attendanceDate\":\"{{attendanceDate}}\",\"status\":\"PRESENT\",\"remarks\":\"Testing invalid student\"}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status code is 404\u0027, () =\u003e pm.response.to.have.status(404));",
+                                                                                                     "pm.test(\u0027Error has message\u0027, () =\u003e pm.expect(pm.response.json().message).to.include(\u0027Student\u0027)); "
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   },
+                                                   {
+                                                       "name":  "AT-04 Invalid subject ID",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\"studentId\":{{studentId}},\"subjectId\":99999,\"attendanceDate\":\"{{attendanceDate}}\",\"status\":\"PRESENT\",\"remarks\":\"Testing invalid subject\"}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status code is 404\u0027, () =\u003e pm.response.to.have.status(404));",
+                                                                                                     "pm.test(\u0027Error has message\u0027, () =\u003e pm.expect(pm.response.json().message).to.include(\u0027Subject\u0027)); "
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   },
+                                                   {
+                                                       "name":  "AT-05 Duplicate attendance",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"attendanceDate\":\"{{validationDate}}\",\"status\":\"PRESENT\",\"remarks\":\"Duplicate test\"}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status code is 409\u0027, () =\u003e pm.response.to.have.status(409));",
+                                                                                                     "pm.test(\u0027Conflict has message\u0027, () =\u003e pm.expect(pm.response.json().message).to.include(\u0027already\u0027)); "
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   },
+                                                   {
+                                                       "name":  "AT-06 Invalid attendance status",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"attendanceDate\":\"{{attendanceDate}}\",\"status\":\"HOLIDAY\",\"remarks\":\"Invalid status test\"}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status code is 400\u0027, () =\u003e pm.response.to.have.status(400));"
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   },
+                                                   {
+                                                       "name":  "AT-07 Future attendance date",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"attendanceDate\":\"2099-12-31\",\"status\":\"PRESENT\",\"remarks\":\"Future date test\"}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status code is 400\u0027, () =\u003e pm.response.to.have.status(400));"
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   },
+                                                   {
+                                                       "name":  "AT-08 Invalid date format",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"attendanceDate\":\"01-11-2026\",\"status\":\"PRESENT\",\"remarks\":\"Invalid date format\"}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status code is 400\u0027, () =\u003e pm.response.to.have.status(400));"
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   },
+                                                   {
+                                                       "name":  "AT-09 Invalid attendance ID",
+                                                       "request":  {
+                                                                       "method":  "GET",
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance/999999",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance",
+                                                                                                "999999"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status code is 404\u0027, () =\u003e pm.response.to.have.status(404));"
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   },
+                                                   {
+                                                       "name":  "AT-13 Invalid date range",
+                                                       "request":  {
+                                                                       "method":  "GET",
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance/range?startDate=2026-12-31\u0026endDate=2026-01-01",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance",
+                                                                                                "range"
+                                                                                            ],
+                                                                                   "query":  [
+                                                                                                 {
+                                                                                                     "key":  "startDate",
+                                                                                                     "value":  "2026-12-31"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "key":  "endDate",
+                                                                                                     "value":  "2026-01-01"
+                                                                                                 }
+                                                                                             ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status code is 400\u0027, () =\u003e pm.response.to.have.status(400));"
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   },
+                                                   {
+                                                       "name":  "AT-14 Empty remarks",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"attendanceDate\":\"{{attendanceDate}}\",\"status\":\"PRESENT\",\"remarks\":\"\"}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status is 201 or duplicate is documented\u0027, () =\u003e pm.expect([201,409]).to.include(pm.response.code));"
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   },
+                                                   {
+                                                       "name":  "AT-15 Remarks too long",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"attendanceDate\":\"{{attendanceDate}}\",\"status\":\"PRESENT\",\"remarks\":\"{{longRemarks}}\"}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{baseUrl}}/api/attendance",
+                                                                                   "host":  [
+                                                                                                "{{baseUrl}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "attendance"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "event":  [
+                                                                     {
+                                                                         "listen":  "test",
+                                                                         "script":  {
+                                                                                        "type":  "javascript",
+                                                                                        "exec":  [
+                                                                                                     "pm.test(\u0027Status code is 400 or duplicate is reported\u0027, () =\u003e pm.expect([400,409]).to.include(pm.response.code));"
+                                                                                                 ]
+                                                                                    }
+                                                                     }
+                                                                 ]
+                                                   }
+                                               ]
+                                  },
+                                  {
+                                      "name":  "05 Delete Attendance",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/attendance/{{attendanceId}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "attendance",
+                                                                               "{{attendanceId}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status code is 204\u0027, () =\u003e pm.response.to.have.status(204));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 }
+             ]
+}

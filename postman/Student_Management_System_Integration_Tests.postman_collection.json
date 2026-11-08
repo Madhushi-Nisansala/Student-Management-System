@@ -1,0 +1,68 @@
+{
+  "info": {
+    "name": "Student Management System - Integration Tests",
+    "description": "Non-destructive API integration collection. Run with the Student Management Local environment in folder order. IDs are captured from create responses.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "studentEmail", "value": "postman-{{$timestamp}}@example.com" },
+    { "key": "subjectCode", "value": "PM-{{$timestamp}}" }
+  ],
+  "item": [
+    {
+      "name": "1. Student Management",
+      "item": [
+        { "name": "Create student", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\"firstName\":\"Postman\",\"lastName\":\"Student\",\"email\":\"{{$randomUUID}}@example.com\"}"}, "url": {"raw":"{{baseUrl}}/api/students","host":["{{baseUrl}}"],"path":["api","students"]}}, "event": [{"listen":"test","script":{"exec":["pm.test('created', () => pm.response.to.have.status(201));","pm.test('student response has id', () => pm.expect(pm.response.json().id).to.exist);","pm.environment.set('studentId', pm.response.json().id);"]}}] },
+        { "name": "List students", "request": { "method":"GET", "url":"{{baseUrl}}/api/students" }, "event": [{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));","pm.expect(pm.response.json()).to.be.an('array');"]}}] },
+        { "name": "Get student", "request": { "method":"GET", "url":"{{baseUrl}}/api/students/{{studentId}}" }, "event": [{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));","pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get('studentId')));"]}}] },
+        { "name": "Update student", "request": { "method":"PUT", "header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"firstName\":\"Updated\",\"lastName\":\"Postman\",\"email\":\"updated-{{$randomUUID}}@example.com\"}"},"url":"{{baseUrl}}/api/students/{{studentId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}] }
+      ]
+    },
+    {
+      "name": "2. Subject Management",
+      "item": [
+        { "name":"Create subject","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"subjectCode\":\"PM-{{$timestamp}}\",\"subjectName\":\"Postman Testing\",\"description\":\"Integration\",\"credits\":3}"},"url":"{{baseUrl}}/api/subjects"},"event":[{"listen":"test","script":{"exec":["pm.test('created', () => pm.response.to.have.status(201));","pm.environment.set('subjectId', pm.response.json().id);"]}}] },
+        { "name":"List subjects","request":{"method":"GET","url":"{{baseUrl}}/api/subjects"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}] },
+        { "name":"Get subject","request":{"method":"GET","url":"{{baseUrl}}/api/subjects/{{subjectId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}] },
+        { "name":"Update subject","request":{"method":"PUT","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"subjectCode\":\"UP-{{$timestamp}}\",\"subjectName\":\"Updated Postman\",\"description\":\"Updated\",\"credits\":4}"},"url":"{{baseUrl}}/api/subjects/{{subjectId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}] }
+      ]
+    },
+    {
+      "name":"3. Student–Subject Assignment","item":[
+        {"name":"Assign subject","request":{"method":"POST","url":"{{baseUrl}}/api/students/{{studentId}}/subjects/{{subjectId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('created', () => pm.response.to.have.status(201));","pm.expect(pm.response.json().studentId).to.eql(Number(pm.environment.get('studentId')));"]}}]},
+        {"name":"Student subjects","request":{"method":"GET","url":"{{baseUrl}}/api/students/{{studentId}}/subjects"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Subject students","request":{"method":"GET","url":"{{baseUrl}}/api/subjects/{{subjectId}}/students"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Duplicate assignment","request":{"method":"POST","url":"{{baseUrl}}/api/students/{{studentId}}/subjects/{{subjectId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('conflict', () => pm.response.to.have.status(409));","pm.expect(pm.response.json().message).to.include('already');"]}}]}
+      ]
+    },
+    {
+      "name":"4. Attendance Management","item":[
+        {"name":"Create attendance","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"attendanceDate\":\"2025-01-15\",\"status\":\"PRESENT\",\"remarks\":\"Postman\"}"},"url":"{{baseUrl}}/api/attendance"},"event":[{"listen":"test","script":{"exec":["pm.test('created', () => pm.response.to.have.status(201));","pm.environment.set('attendanceId', pm.response.json().id);"]}}]},
+        {"name":"Search attendance page","request":{"method":"GET","url":"{{baseUrl}}/api/attendance?page=0&size=20&sort=attendanceDate,desc"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));","pm.expect(pm.response.json().content).to.be.an('array');"]}}]},
+        {"name":"Student attendance summary","request":{"method":"GET","url":"{{baseUrl}}/api/attendance/summary/student/{{studentId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));","pm.expect(pm.response.json()).to.have.property('attendancePercentage');"]}}]},
+        {"name":"Get attendance by ID","request":{"method":"GET","url":"{{baseUrl}}/api/attendance/{{attendanceId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Attendance by student","request":{"method":"GET","url":"{{baseUrl}}/api/attendance/student/{{studentId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));","pm.expect(pm.response.json()).to.be.an('array');"]}}]},
+        {"name":"Attendance by subject","request":{"method":"GET","url":"{{baseUrl}}/api/attendance/subject/{{subjectId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Attendance by date","request":{"method":"GET","url":"{{baseUrl}}/api/attendance/date/2025-01-15"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Attendance by range","request":{"method":"GET","url":"{{baseUrl}}/api/attendance/range?startDate=2025-01-01&endDate=2025-01-31"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Filtered attendance","request":{"method":"GET","url":"{{baseUrl}}/api/attendance?studentId={{studentId}}&subjectId={{subjectId}}&status=LATE&page=0&size=20&sort=attendanceDate,asc"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));","pm.expect(pm.response.json()).to.have.property('content');"]}}]},
+        {"name":"Subject attendance summary","request":{"method":"GET","url":"{{baseUrl}}/api/attendance/summary/subject/{{subjectId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));","pm.expect(pm.response.json()).to.have.property('attendancePercentage');"]}}]},
+        {"name":"Update attendance","request":{"method":"PUT","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"attendanceDate\":\"2025-01-15\",\"status\":\"LATE\",\"remarks\":\"Updated\"}"},"url":"{{baseUrl}}/api/attendance/{{attendanceId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]}
+      ]
+    },
+    {
+      "name":"5. Marks Management","item":[
+        {"name":"Create mark","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"assessmentName\":\"{{assessmentName}}\",\"assessmentType\":\"ASSIGNMENT\",\"marksObtained\":18,\"maximumMarks\":20,\"assessmentDate\":\"2025-01-15\",\"remarks\":\"Postman\"}"},"url":"{{baseUrl}}/api/marks"},"event":[{"listen":"test","script":{"exec":["pm.test('created', () => pm.response.to.have.status(201));","pm.environment.set('markId', pm.response.json().id);","pm.expect(pm.response.json().percentage).to.eql(90.0);"]}}]},
+        {"name":"All marks","request":{"method":"GET","url":"{{baseUrl}}/api/marks"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Student marks","request":{"method":"GET","url":"{{baseUrl}}/api/marks/student/{{studentId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Subject marks","request":{"method":"GET","url":"{{baseUrl}}/api/marks/subject/{{subjectId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Student subject marks","request":{"method":"GET","url":"{{baseUrl}}/api/marks/student/{{studentId}}/subject/{{subjectId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Get mark","request":{"method":"GET","url":"{{baseUrl}}/api/marks/{{markId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]},
+        {"name":"Update mark","request":{"method":"PUT","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"assessmentName\":\"{{assessmentName}} Updated\",\"assessmentType\":\"ASSIGNMENT\",\"marksObtained\":19,\"maximumMarks\":20,\"assessmentDate\":\"2025-01-15\"}"},"url":"{{baseUrl}}/api/marks/{{markId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));"]}}]}
+      ]
+    },
+    {"name":"6. Student Performance","item":[{"name":"Performance summary","request":{"method":"GET","url":"{{baseUrl}}/api/marks/student/{{studentId}}/performance"},"event":[{"listen":"test","script":{"exec":["pm.test('ok', () => pm.response.to.have.status(200));","pm.expect(pm.response.json()).to.have.property('overallAveragePercentage');","pm.expect(pm.response.json()).to.have.property('overallGrade');"]}}]}]},
+    {"name":"7. Validation Testing","item":[{"name":"Invalid student","request":{"method":"GET","url":"{{baseUrl}}/api/students/999999999"},"event":[{"listen":"test","script":{"exec":["pm.test('not found', () => pm.response.to.have.status(404));","pm.expect(pm.response.json()).to.not.have.property('trace');"]}}]},{"name":"Invalid mark range","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"studentId\":{{studentId}},\"subjectId\":{{subjectId}},\"assessmentName\":\"Invalid\",\"assessmentType\":\"QUIZ\",\"marksObtained\":21,\"maximumMarks\":20,\"assessmentDate\":\"2025-01-15\"}"},"url":"{{baseUrl}}/api/marks"},"event":[{"listen":"test","script":{"exec":["pm.test('bad request', () => pm.response.to.have.status(400));","pm.expect(pm.response.json()).to.have.property('message');"]}}]}]},
+    {"name":"8. End-to-End Workflow","item":[{"name":"Remove mark","request":{"method":"DELETE","url":"{{baseUrl}}/api/marks/{{markId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('deleted', () => pm.response.to.have.status(204));"]}}]},{"name":"Remove attendance","request":{"method":"DELETE","url":"{{baseUrl}}/api/attendance/{{attendanceId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('deleted', () => pm.response.to.have.status(204));"]}}]},{"name":"Remove assignment","request":{"method":"DELETE","url":"{{baseUrl}}/api/students/{{studentId}}/subjects/{{subjectId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('deleted', () => pm.response.to.have.status(204));"]}}]},{"name":"Delete subject","request":{"method":"DELETE","url":"{{baseUrl}}/api/subjects/{{subjectId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('deleted', () => pm.response.to.have.status(204));"]}}]},{"name":"Delete student","request":{"method":"DELETE","url":"{{baseUrl}}/api/students/{{studentId}}"},"event":[{"listen":"test","script":{"exec":["pm.test('deleted', () => pm.response.to.have.status(204));"]}}]}]}
+  ]
+}
